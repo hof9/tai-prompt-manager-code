@@ -1,35 +1,44 @@
-import { Metadata } from 'next'
+// app/prompts/page.tsx
+import { getPrompts } from "@/actions/prompts-actions"; // Import server action
+import { Header } from "@/components/header";
+import { Suspense } from "react"; // Import Suspense
+import { LoadingGrid } from "./_components/loading-grid"; // Import loading component
+import { PromptsGrid } from "./_components/prompts-grid";
 
-export const metadata: Metadata = {
-  title: 'Prompts',
-  description: 'Manage and organize your prompts',
+// Opt out of caching
+export const dynamic = "force-dynamic";
+
+// Keep as default export, but we won't fetch directly here for Suspense
+export default async function PromptsPage() {
+
+  return (
+    <>
+      <Header />
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 pt-24 pb-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-8">
+            My Prompts
+          </h1>
+
+          {/* Use Suspense to handle the loading state */}
+          <Suspense fallback={<LoadingGrid />}>
+             {/* Render an intermediate async component to handle data fetching */}
+            <PromptsLoader />
+          </Suspense>
+        </div>
+      </div>
+    </>
+  );
 }
 
-export default function PromptsPage() {
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold mb-6">My Prompts</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Placeholder prompt cards */}
-        {[1, 2, 3].map((i) => (
-          <div 
-            key={i}
-            className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow"
-          >
-            <h2 className="text-xl font-semibold mb-2">Prompt Title {i}</h2>
-            <p className="text-gray-600 mb-4">
-              This is a placeholder description for prompt {i}. 
-              The actual content will be loaded from the database.
-            </p>
-            <div className="flex justify-end">
-              <button className="text-sm text-blue-600 hover:text-blue-800">
-                View Details
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
+/**
+ * An async Server Component responsible for fetching the data.
+ * React Suspense will catch the promise awaited here and show the fallback.
+ */
+async function PromptsLoader() {
+  // Fetch the prompts data using the Server Action
+  const prompts = await getPrompts();
+
+  // Once data is ready, render the Client Component with the data
+  return <PromptsGrid initialPrompts={prompts} />;
 }
