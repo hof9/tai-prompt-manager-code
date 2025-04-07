@@ -309,7 +309,9 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
                         </p>
                         {deleteError && <p className="text-sm text-red-500">{deleteError}</p>}
                         <DialogFooter>
-                          <Button variant="outline" onClick={() => setDeletingId(null)}>Cancel</Button>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" onClick={() => setDeletingId(null)}>Cancel</Button>
+                          </DialogTrigger>
                           <Button variant="destructive" onClick={handleDeleteConfirm} disabled={isDeleting}>
                             {isDeleting ? "Deleting..." : "Delete"}
                           </Button>
