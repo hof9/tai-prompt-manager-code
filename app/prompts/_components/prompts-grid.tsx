@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { createPrompt } from "@/actions/prompts-actions";
+import { createPrompt, updatePrompt } from "@/actions/prompts-actions";
 import { motion } from "framer-motion";
 import { Copy, Edit2, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -31,6 +31,7 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -43,15 +44,39 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
     setError(null);
 
     try {
-      const newPrompt = await createPrompt(formData);
-      setPrompts(prev => [newPrompt, ...prev]);
+      if (editingId) {
+        const updatedPrompt = await updatePrompt({ id: editingId, ...formData });
+        setPrompts(prev => prev.map(p => p.id === editingId ? updatedPrompt : p));
+      } else {
+        const newPrompt = await createPrompt(formData);
+        setPrompts(prev => [newPrompt, ...prev]);
+      }
       setFormData({ name: "", description: "", content: "" });
+      setEditingId(null);
       setIsDialogOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create prompt");
+      setError(err instanceof Error ? err.message : "Failed to save prompt");
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEdit = (prompt: Prompt) => {
+    setEditingId(prompt.id);
+    setFormData({
+      name: prompt.name,
+      description: prompt.description,
+      content: prompt.content
+    });
+    setIsDialogOpen(true);
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    if (!open) {
+      setEditingId(null);
+      setFormData({ name: "", description: "", content: "" });
+    }
+    setIsDialogOpen(open);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -121,7 +146,7 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
     <>
       {/* Button to trigger creating a new prompt */}
       <div className="mb-6 flex justify-end">
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button className="gap-2">
               <Plus className="w-5 h-5" /> Create Prompt
@@ -129,7 +154,7 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px]">
             <DialogHeader>
-              <DialogTitle>Create New Prompt</DialogTitle>
+              <DialogTitle>{editingId ? "Edit Prompt" : "Create New Prompt"}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
@@ -165,7 +190,7 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
               </div>
               {error && <p className="text-sm text-red-500">{error}</p>}
               <Button type="submit" disabled={isSubmitting} className="w-full">
-                {isSubmitting ? "Creating..." : "Create Prompt"}
+                {isSubmitting ? (editingId ? "Updating..." : "Creating...") : (editingId ? "Update Prompt" : "Create Prompt")}
               </Button>
             </form>
           </DialogContent>
@@ -197,7 +222,7 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
                   </div>
                   {/* Action Buttons */}
                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit" onClick={() => console.log('Edit', prompt.id)}> <Edit2 className="w-4 h-4" /> </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit" onClick={() => handleEdit(prompt)}> <Edit2 className="w-4 h-4" /> </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" title="Delete" onClick={() => console.log('Delete', prompt.id)}> <Trash2 className="w-4 h-4" /> </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" title="Copy" onClick={() => console.log('Copy', prompt.id)}> <Copy className="w-4 h-4" /> </Button>
                   </div>
