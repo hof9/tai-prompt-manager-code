@@ -3,6 +3,11 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card"; // Import Shadcn Card
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { createPrompt } from "@/actions/prompts-actions";
 import { motion } from "framer-motion";
 import { Copy, Edit2, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
@@ -23,16 +28,90 @@ interface PromptsGridProps {
 export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
   // Initialize state with the passed prompts
   const [prompts, setPrompts] = useState<Prompt[]>(initialPrompts);
-  // Placeholder state for copy confirmation (implement later)
-  // const [copiedId, setCopiedId] = useState<number | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    content: ""
+  });
 
-   // Display message and create button if no prompts exist
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const newPrompt = await createPrompt(formData);
+      setPrompts(prev => [newPrompt, ...prev]);
+      setFormData({ name: "", description: "", content: "" });
+      setIsDialogOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create prompt");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Display message and create button if no prompts exist
   if (prompts.length === 0) {
     return (
       <div className="text-center py-12">
-         <Button onClick={() => { /* Add create logic */ }} className="mb-6 gap-2">
-           <Plus className="w-5 h-5" /> Create First Prompt
-         </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="mb-6 gap-2">
+              <Plus className="w-5 h-5" /> Create First Prompt
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create New Prompt</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="content">Content</Label>
+                <Textarea
+                  id="content"
+                  name="content"
+                  value={formData.content}
+                  onChange={handleChange}
+                  required
+                  className="min-h-[100px]"
+                />
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? "Creating..." : "Create Prompt"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
         <p className="text-gray-600 dark:text-gray-300">No prompts found. Get started by creating one!</p>
       </div>
     );
@@ -42,9 +121,55 @@ export const PromptsGrid = ({ initialPrompts }: PromptsGridProps) => {
     <>
       {/* Button to trigger creating a new prompt */}
       <div className="mb-6 flex justify-end">
-        <Button onClick={() => { /* Add create logic */ }} className="gap-2">
-          <Plus className="w-5 h-5" /> Create Prompt
-        </Button>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+          <DialogTrigger asChild>
+            <Button className="gap-2">
+              <Plus className="w-5 h-5" /> Create Prompt
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Create New Prompt</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="description">Description</Label>
+                <Input
+                  id="description"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="content">Content</Label>
+                <Textarea
+                  id="content"
+                  name="content"
+                  value={formData.content}
+                  onChange={handleChange}
+                  required
+                  className="min-h-[100px]"
+                />
+              </div>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+              <Button type="submit" disabled={isSubmitting} className="w-full">
+                {isSubmitting ? "Creating..." : "Create Prompt"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
       {/* Responsive Grid Layout */}
